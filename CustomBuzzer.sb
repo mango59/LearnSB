@@ -1,0 +1,114 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// +++++                                                                      ++
+'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+'// +++++  which consists of all characters up to the first . and excluding it ++
+'// +++++                                                                      ++
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// Simple program that activates the buzzer every 5 seconds
+'//
+'// 08/10/2015
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions
+
+'//Parameters for GPIOSETFUNC() for the Buzzer GPIO
+#DEFINE BUZZER_SIG 15         '//SIO 15.....the Buzzer SIO
+#DEFINE PIN_CONFIG 2       '//Configure GPIO pin as Digital IN
+#DEFINE SUB_FUNC 3         '//Need to set this up when unit/module is powered ON
+
+'//Parameters for GPIOSETFUNC() for the Stop button GPIO
+#DEFINE BUZZER_SIG_STOP 16    '//SIO 16....the button SIO
+#DEFINE PIN_CONFIG_STOP 1  '//Digital In
+#DEFINE SUB_FUNC_STOP 2    '//Pull up resistor (weak)
+
+'//Parameters for TIMERSTART()
+#DEFINE TIMER_LABEL 0       '// The number of the timer
+#DEFINE TIMER_LENGTH 5000  '//timer length
+#DEFINE RECUR 0
+
+'//Parameters for GPIOBINDEVENT for the Stop button
+#DEFINE EVENT_NUM_STOP 0     '//This is the event number
+#DEFINE POLARITY 1              '//states the transition
+
+'//Parameters for the START button
+#DEFINE BUZZER_SIG_RE 17                 //GPIO BUTTON
+#DEFINE EVENT_NUM_RE 1
+
+'//******************************************************************************
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+dim rc                '//result code
+
+//variable for Print statement
+dim ck : ck = 0
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+sub OnStart()                                                                      '//New Subroutine that INITIALIZES functions
+  rc = GpioSetFunc(BUZZER_SIG, PIN_CONFIG, SUB_FUNC)                                  '//Configure SIO 15 as Digital Input power
+
+  rc = GpioSetFunc(BUZZER_SIG_STOP, PIN_CONFIG_STOP, SUB_FUNC_STOP)
+  rc = GpioBindEvent(EVENT_NUM_STOP, BUZZER_SIG_STOP, POLARITY)
+
+  rc = GpioSetFunc(BUZZER_SIG_RE, PIN_CONFIG_STOP, SUB_FUNC_STOP)
+  rc = GpioBindEvent(EVENT_NUM_RE, BUZZER_SIG_RE, POLARITY)
+
+  TimerStart(TIMER_LABEL, TIMER_LENGTH, RECUR)
+endsub
+
+
+
+'//******************************************************************************
+'// Handler definitions
+
+function handlerTimer()
+  if ck == 0 then
+    PRINT "\nTimer Starting"
+  else
+    PRINT "\nTIMER RESTARTING"
+  endif
+
+  GpioWrite(BUZZER_SIG, 262)
+  DIM TN: TN = GetTickCount()
+  while( GetTickSince(tn) < 1000 )
+  endwhile
+  GpioWrite(BUZZER_SIG, 0)
+
+  TimerStart(TIMER_LABEL, TIMER_LENGTH, RECUR)
+endfunc 1
+
+function handlerStopTimer()
+  GpioWrite(BUZZER_SIG,0)                                             '// 0 = nNewValue pin is configured as digital then 0 will clear the pin
+  TimerCancel(0)
+  PRINT "\nTIME STOP"
+endfunc 1
+
+function handlerStartTimer()
+  ck = 1
+  rc = handlerTimer()
+endfunc 1
+
+OnEvent EVTMR0 CALL handlerTimer
+OnEvent EVGPIOCHAN0 CALL handlerStopTimer           //Button is pressed to Stop Timer
+OnEvent EVGPIOCHAN1 CALL handlerStartTimer          //Button is pressed to Start Timer
+'//******************************************************************************
+
+'//******************************************************************************
+'// Equivalent to main() in C
+'//******************************************************************************
+
+OnStart()
+WAITEVENT
