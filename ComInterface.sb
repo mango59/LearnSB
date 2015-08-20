@@ -1,0 +1,61 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// +++++                                                                      ++
+'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+'// +++++  which consists of all characters up to the first . and excluding it ++
+'// +++++                                                                      ++
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// Simple command interface program
+'//
+'// 08/19/2015
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions
+'//******************************************************************************
+
+'//Parameters for TIMERSTART()
+#DEFINE TIMER_LABEL 0       '// The number of the timer
+#DEFINE TIMER_LENGTH 2  '//timer length
+#DEFINE RECUR 0
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+dim rc                                                                              //result code
+dim strLength, str$                                                                 //variables for UartRead()
+str$ = "Your name is "
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+
+function HndlrBufferTimer()                                                              //This function allow buffer to fill
+  TimerStart(TIMER_LABEL, TIMER_LENGTH, RECUR)
+endfunc 1
+
+function HndlrUartRx()                                                               //appends to variable str$
+  strLength = UartRead(str$)
+  PRINT "\n";str$
+endfunc 1
+
+OnEvent EVTMR0 CALL HndlrBufferTimer
+OnEvent EVUARTRX CALL HndlrUartRx
+
+'//******************************************************************************
+'// Equivalent to main() in C
+'//******************************************************************************
+
+PRINT "What is your name?"
+
+WAITEVENT
