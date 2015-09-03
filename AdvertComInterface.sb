@@ -1,0 +1,124 @@
+'//******************************************************************************
+'// Laird Technologies (c) 2013
+'//
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'// +++++                                                                      ++
+'// +++++  When UwTerminal downloads the app it will store it as a filenname   ++
+'// +++++  which consists of all characters up to the first . and excluding it ++
+'// +++++                                                                      ++
+'// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'//
+'// Command Interface which allows users enter advert commands
+'//
+'// 09/03/2015
+'//
+'//******************************************************************************
+
+'//******************************************************************************
+'// Definitions
+'//******************************************************************************
+
+'//Parameters for TIMERSTART()
+#DEFINE TIMER_LABEL 0       '// The number of the timer
+#DEFINE TIMER_LENGTH 100  '//timer length
+#DEFINE RECUR 0
+
+//Parameters for BleAdvertStart()
+dim addr$ : addr$=""
+#DEFINE ADV_TYPE 0
+#DEFINE ADV_INTERVAL 25
+#DEFINE ADV_TIMEOUT 60000
+#DEFINE FILTER_POLICY 0
+
+'//******************************************************************************
+'// Library Import
+'//******************************************************************************
+
+'//******************************************************************************
+'// Global Variable Declarations
+'//******************************************************************************
+
+dim rc                                                                            //result code
+dim statement$: statement$ = "Enter Command: "
+dim read$: read$ = ""
+
+dim help$: help$ = "help"
+
+dim char : char = 13                                                              //CR
+
+dim UserCom$: UserCom$ = "Available Commands"
+
+//Variables for Token function
+dim urtcmd$
+dim tlen
+dim tlen2
+dim tkn$
+dim tknInit
+dim tknAdd
+
+//Command Variables
+dim advStart$: advStart$ = "advert start"
+
+'//******************************************************************************
+'// Function and Subroutine definitions
+'//******************************************************************************
+'//******************************************************************************
+'// Handler definitions
+'//******************************************************************************
+
+function HndlrUartTimer()                                                         //This function allow buffer to fill
+  TimerStart(TIMER_LABEL, TIMER_LENGTH, RECUR)
+endfunc 1
+
+function UserCommand()
+  PRINT "\n: " ;UserCom$
+  PRINT "\n: 1. advert start"
+  PRINT "\n: 2. advert stop"
+endfunc 1
+
+function ExtractToken()
+  tlen = ExtractStrToken(urtcmd$,tkn$)                                            //get first token
+  PRINT "\nToken 1(len ";tlen;") = ";tkn$
+
+  if STRCMP(tkn$,help$) == 0 then                                                 //String compare
+    PRINT "\nHere is the HELP MENU!"
+    exitfunc UserCommand()                                                        //If this conditional statement is true then exit this function and call UserCommand function
+  elseif STRCMP(tkn$,"advert") == 0 then                                          //Checks to see if "advert" was initially entered by user
+    tlen2 = ExtractStrToken(urtcmd$,tkn$)                                         //get second token
+    if STRCMP(tkn$, "start") == 0 then                                            //Checks to see if "start" was entered after "advert"
+      PRINT "\nToken 2(len ";tlen2;") = ";tkn$
+      PRINT "\nYour command is advert: " ;tkn$
+      rc = BleAdvertStart(ADV_TYPE, addr$, ADV_INTERVAL, ADV_TIMEOUT, FILTER_POLICY)    //Start BLE ADVERT Function
+      PRINT "\n\nAdvert Started\n"
+    elseif STRCMP(tkn$, "stop") == 0 then                                         //Checks to see if "stop" was entered after "advert"
+      PRINT "\nToken 2(len ";tlen2;") = ";tkn$
+      PRINT "\nYour command is advert: " ;tkn$
+      rc = BleAdvertStop()                                                        //Function stops BLE ADVERT
+      PRINT "\nAdvert Stopped\n"
+    else
+      PRINT "\nInvalid Advert Command!!!!"
+    endif
+  else
+    PRINT "\nInvalid Command!!!"
+  endif
+endfunc 1
+
+function HndlrUartLogic()
+  dim nMatch
+  nMatch = UartReadMatch(read$, char)                                             //Appends what user typed to read$ then compares to char (CR)
+  if nMatch != 0 then
+    urtcmd$ = strsplitleft$(read$, nMatch)                                        //Checks to see if CR exists in the input buffer
+    exitfunc ExtractToken()                                                       //process the received string
+  endif
+endfunc 1
+
+OnEvent EVTMR0 CALL HndlrUartLogic                                                //when timer function expires event timer 0 occurs and calls
+OnEvent EVUARTRX CALL HndlrUartTimer                                              //Uart will receive data then call timer function
+
+'//******************************************************************************
+'// Equivalent to main() in C
+'//******************************************************************************
+
+PRINT "\n";statement$;"?\n"
+
+WAITEVENT

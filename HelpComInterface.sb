@@ -20,7 +20,7 @@
 
 '//Parameters for TIMERSTART()
 #DEFINE TIMER_LABEL 0       '// The number of the timer
-#DEFINE TIMER_LENGTH 2  '//timer length
+#DEFINE TIMER_LENGTH 100  '//timer length
 #DEFINE RECUR 0
 
 '//******************************************************************************
@@ -30,9 +30,20 @@
 '//******************************************************************************
 '// Global Variable Declarations
 '//******************************************************************************
-dim rc                                                                              //result code
-dim strLength, str$                                                                 //variables for UartRead()
-str$ = "Your name is "
+
+dim rc                                                                            //result code
+dim name$: name$= "Your name is "
+dim read$: read$ = ""
+
+dim help$: help$ = "help"
+
+dim char : char = 13
+dim length
+dim newRead$
+
+dim urtcmd$
+dim tlen
+dim tkn$
 '//******************************************************************************
 '// Function and Subroutine definitions
 '//******************************************************************************
@@ -40,22 +51,37 @@ str$ = "Your name is "
 '// Handler definitions
 '//******************************************************************************
 
-function HndlrBufferTimer()                                                              //This function allow buffer to fill
+function HndlrUartTimer()                                                           //This function allow buffer to fill
   TimerStart(TIMER_LABEL, TIMER_LENGTH, RECUR)
 endfunc 1
 
-function HndlrUartRx()                                                               //appends to variable str$
-  strLength = UartRead(str$)
-  PRINT "\n";str$
+function Cmd()
+  //get first token
+  tlen = ExtractStrToken(urtcmd$,tkn$)
+
+  if STRCMP(tkn$,help$) == 0 then
+    PRINT "\nHere is the HELP MENU! 0"
+  Else
+    PRINT "\n"; name$ + "\n" read$
+  endif
 endfunc 1
 
-OnEvent EVTMR0 CALL HndlrBufferTimer
-OnEvent EVUARTRX CALL HndlrUartRx
+function HndlrMain()
+  dim nMatch
+  nMatch = UartReadMatch(read$, char)                                             //Appends what user typed to read$ then compares to char (CR)
+  if nMatch!=0 then
+    urtcmd$ = strsplitleft$(read$, nMatch)                                        //Checks to see if CR exists in the input buffer
+    exitfunc Cmd()                                                                //process the received string
+   endif
+endfunc 1
+
+OnEvent EVTMR0 CALL HndlrMain                                                     //when timer function expires event timer 0 occurs and calls
+OnEvent EVUARTRX CALL HndlrUartTimer                                              //Uart will receive data then call timer function
 
 '//******************************************************************************
 '// Equivalent to main() in C
 '//******************************************************************************
 
-PRINT "What is your name?"
+PRINT "\nWhat is your name?\n"
 
 WAITEVENT
